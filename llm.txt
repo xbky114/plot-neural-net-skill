@@ -1,0 +1,76 @@
+# PlotNeuralNet Python API
+
+`pycore.tikzeng` 与 `pycore.blocks` 接口。路径与工作流见 SKILL.md。
+
+## 文档结构函数 (tikzeng)
+
+| 函数 | 说明 |
+|------|------|
+| `to_head(projectpath)` | 生成 `\documentclass`、`\usepackage{import}`、`\subimport{.../layers/}{init}` |
+| `to_cor()` | 定义 Conv / Pool / Unpool / Fc / Softmax / Sum 等颜色宏 |
+| `to_begin()` | `\begin{document}`、`\begin{tikzpicture}`、connection 样式 |
+| `to_end()` | 结束 tikzpicture 与 document |
+
+## 层函数 (tikzeng)
+
+所有层的 `name` 会作为 TikZ 节点名，用于连接时引用。锚点格式：`{name}-east`、`-west`、`-north`、`-south`、`-northeast`、`-southeast`、`-top`。
+
+### `to_input(pathfile, to='(-3,0,0)', width=8, height=8, name="temp")`
+插入外部图片作为输入。`pathfile` 为图片路径（相对编译目录）。
+
+### `to_Conv(name, s_filer=256, n_filer=64, offset="(0,0,0)", to="(0,0,0)", width=1, height=40, depth=40, caption=" ")`
+卷积层（Box）。`s_filer` 显示在 z 轴标签；`n_filer` 显示在 x 轴标签。`offset` 相对 `to` 锚点的位移。
+
+### `to_ConvConvRelu(name, s_filer=256, n_filer=(64,64), offset="(0,0,0)", to="(0,0,0)", width=(2,2), height=40, depth=40, caption=" ")`
+双卷积 + ReLU（RightBandedBox）。`n_filer`、`width` 为二元组。
+
+### `to_Pool(name, offset="(0,0,0)", to="(0,0,0)", width=1, height=32, depth=32, opacity=0.5, caption=" ")`
+池化层，红色半透明 Box。
+
+### `to_UnPool(name, offset="(0,0,0)", to="(0,0,0)", width=1, height=32, depth=32, opacity=0.5, caption=" ")`
+上采样层，蓝色半透明 Box。
+
+### `to_ConvRes(name, s_filer=256, n_filer=64, offset="(0,0,0)", to="(0,0,0)", width=6, height=40, depth=40, opacity=0.2, caption=" ")`
+残差旁路（灰白 RightBandedBox），用于 skip connection 可视化。
+
+### `to_ConvSoftMax(name, s_filer=40, offset="(0,0,0)", to="(0,0,0)", width=1, height=40, depth=40, caption=" ")`
+卷积式 Softmax 输出（Box，仅 zlabel）。
+
+### `to_SoftMax(name, s_filer=10, offset="(0,0,0)", to="(0,0,0)", width=1.5, height=3, depth=25, opacity=0.8, caption=" ")`
+全连接 / Softmax 输出层（竖条 Box）。
+
+### `to_Sum(name, offset="(0,0,0)", to="(0,0,0)", radius=2.5, opacity=0.6)`
+加法节点（Ball，显示 `$+$`）。
+
+## 连接函数 (tikzeng)
+
+### `to_connection(of, to)`
+从前层 `{of}-east` 到后层 `{to}-west` 画主数据流箭头。`of`、`to` 为层 `name`（不含锚点后缀）。
+
+### `to_skip(of, to, pos=1.25)`
+跳跃连接：从 `of` 的东北角经顶部绕行到 `to` 的北边，使用 `copyconnection` 样式（蓝绿虚线箭头）。
+
+## 输出函数 (tikzeng)
+
+### `to_generate(arch, pathname="file.tex")`
+将 `arch` 列表中所有字符串顺序写入 `pathname`。
+
+## 复合块 (blocks)
+
+返回层列表片段，可用 `arch += block_xxx(...)` 或 `arch.extend(...)` 拼入 `arch`。
+
+### `block_2ConvPool(name, botton, top, s_filer=256, n_filer=64, offset="(1,0,0)", size=(32,32,3.5), opacity=0.5)`
+ConvConvRelu → Pool，并连接 `botton` → `ccr_{name}`。`size` 为 `(height, depth, width)`。生成层名：`ccr_{name}`、`top`（Pool）。
+
+### `block_Unconv(name, botton, top, s_filer=256, n_filer=64, offset="(1,0,0)", size=(32,32,3.5), opacity=0.5)`
+上采样解码块：UnPool → ConvRes → Conv → ConvRes → Conv，连接 `botton` → `unpool_{name}`。最终输出层名为 `top`。
+
+### `block_Res(num, name, botton, top, s_filer=256, n_filer=64, offset="(0,0,0)", size=(32,32,3.5), opacity=0.5)`
+`num` 个串联 Conv（中间层 `{name}_0`…`{name}_{num-2}`，末层 `top`），每层接 `to_connection`，并在 `layers[1]` 与 `layers[-2]` 之间加 `to_skip`。
+
+## 布局约定
+
+- **定位**：`to="(prev-east)"` 将新层放在前一层的东侧；`offset="(dx,dy,dz)"` 微调位置（TikZ 3D 坐标）。
+- **尺寸**：`height`、`depth` 控制立体块的高与深（通常随特征图缩小而递减）；`width` 控制块厚度。
+- **颜色**：由 `to_cor()` 中的宏控制，无需在 Python 侧指定（Pool/Unpool 等层除外，它们有固定 fill 宏）。
+- **projectpath**：`to_head` 的参数为 `PROJECT_DIR` → `SCRIPTS_DIR` 的相对路径。
