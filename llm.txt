@@ -1,76 +1,76 @@
 # PlotNeuralNet Python API
 
-`pycore.tikzeng` 与 `pycore.blocks` 接口。路径与工作流见 SKILL.md。
+`pycore.tikzeng` and `pycore.blocks` APIs. See SKILL.md for paths and workflow.
 
-## 文档结构函数 (tikzeng)
+## Document Structure Functions (tikzeng)
 
-| 函数 | 说明 |
-|------|------|
-| `to_head(projectpath)` | 生成 `\documentclass`、`\usepackage{import}`、`\subimport{.../layers/}{init}` |
-| `to_cor()` | 定义 Conv / Pool / Unpool / Fc / Softmax / Sum 等颜色宏 |
-| `to_begin()` | `\begin{document}`、`\begin{tikzpicture}`、connection 样式 |
-| `to_end()` | 结束 tikzpicture 与 document |
+| Function | Description |
+|----------|-------------|
+| `to_head(projectpath)` | Emit `\documentclass`, `\usepackage{import}`, `\subimport{.../layers/}{init}` |
+| `to_cor()` | Define color macros for Conv / Pool / Unpool / Fc / Softmax / Sum |
+| `to_begin()` | `\begin{document}`, `\begin{tikzpicture}`, connection styles |
+| `to_end()` | Close tikzpicture and document |
 
-## 层函数 (tikzeng)
+## Layer Functions (tikzeng)
 
-所有层的 `name` 会作为 TikZ 节点名，用于连接时引用。锚点格式：`{name}-east`、`-west`、`-north`、`-south`、`-northeast`、`-southeast`、`-top`。
+Each layer's `name` becomes a TikZ node name used for connections. Anchor format: `{name}-east`, `-west`, `-north`, `-south`, `-northeast`, `-southeast`, `-top`.
 
 ### `to_input(pathfile, to='(-3,0,0)', width=8, height=8, name="temp")`
-插入外部图片作为输入。`pathfile` 为图片路径（相对编译目录）。
+Insert an external image as input. `pathfile` is the image path (relative to the compile directory).
 
 ### `to_Conv(name, s_filer=256, n_filer=64, offset="(0,0,0)", to="(0,0,0)", width=1, height=40, depth=40, caption=" ")`
-卷积层（Box）。`s_filer` 显示在 z 轴标签；`n_filer` 显示在 x 轴标签。`offset` 相对 `to` 锚点的位移。
+Convolution layer (Box). `s_filer` is shown on the z-axis label; `n_filer` on the x-axis label. `offset` is displacement relative to the `to` anchor.
 
 ### `to_ConvConvRelu(name, s_filer=256, n_filer=(64,64), offset="(0,0,0)", to="(0,0,0)", width=(2,2), height=40, depth=40, caption=" ")`
-双卷积 + ReLU（RightBandedBox）。`n_filer`、`width` 为二元组。
+Double conv + ReLU (RightBandedBox). `n_filer` and `width` are pairs.
 
 ### `to_Pool(name, offset="(0,0,0)", to="(0,0,0)", width=1, height=32, depth=32, opacity=0.5, caption=" ")`
-池化层，红色半透明 Box。
+Pooling layer; red semi-transparent Box.
 
 ### `to_UnPool(name, offset="(0,0,0)", to="(0,0,0)", width=1, height=32, depth=32, opacity=0.5, caption=" ")`
-上采样层，蓝色半透明 Box。
+Upsampling layer; blue semi-transparent Box.
 
 ### `to_ConvRes(name, s_filer=256, n_filer=64, offset="(0,0,0)", to="(0,0,0)", width=6, height=40, depth=40, opacity=0.2, caption=" ")`
-残差旁路（灰白 RightBandedBox），用于 skip connection 可视化。
+Residual bypass (gray-white RightBandedBox) for skip-connection visualization.
 
 ### `to_ConvSoftMax(name, s_filer=40, offset="(0,0,0)", to="(0,0,0)", width=1, height=40, depth=40, caption=" ")`
-卷积式 Softmax 输出（Box，仅 zlabel）。
+Conv-style Softmax output (Box with zlabel only).
 
 ### `to_SoftMax(name, s_filer=10, offset="(0,0,0)", to="(0,0,0)", width=1.5, height=3, depth=25, opacity=0.8, caption=" ")`
-全连接 / Softmax 输出层（竖条 Box）。
+Fully connected / Softmax output layer (vertical bar Box).
 
 ### `to_Sum(name, offset="(0,0,0)", to="(0,0,0)", radius=2.5, opacity=0.6)`
-加法节点（Ball，显示 `$+$`）。
+Addition node (Ball showing `$+$`).
 
-## 连接函数 (tikzeng)
+## Connection Functions (tikzeng)
 
 ### `to_connection(of, to)`
-从前层 `{of}-east` 到后层 `{to}-west` 画主数据流箭头。`of`、`to` 为层 `name`（不含锚点后缀）。
+Draw the main data-flow arrow from `{of}-east` to `{to}-west`. `of` and `to` are layer `name` values (without anchor suffixes).
 
 ### `to_skip(of, to, pos=1.25)`
-跳跃连接：从 `of` 的东北角经顶部绕行到 `to` 的北边，使用 `copyconnection` 样式（蓝绿虚线箭头）。
+Skip connection: route from the northeast corner of `of` over the top to the north side of `to`, using the `copyconnection` style (blue-green dashed arrow).
 
-## 输出函数 (tikzeng)
+## Output Function (tikzeng)
 
 ### `to_generate(arch, pathname="file.tex")`
-将 `arch` 列表中所有字符串顺序写入 `pathname`。
+Write all strings in `arch` sequentially to `pathname`.
 
-## 复合块 (blocks)
+## Composite Blocks (blocks)
 
-返回层列表片段，可用 `arch += block_xxx(...)` 或 `arch.extend(...)` 拼入 `arch`。
+Return a list of layer fragments; append with `arch += block_xxx(...)` or `arch.extend(...)`.
 
 ### `block_2ConvPool(name, botton, top, s_filer=256, n_filer=64, offset="(1,0,0)", size=(32,32,3.5), opacity=0.5)`
-ConvConvRelu → Pool，并连接 `botton` → `ccr_{name}`。`size` 为 `(height, depth, width)`。生成层名：`ccr_{name}`、`top`（Pool）。
+ConvConvRelu → Pool, with connection `botton` → `ccr_{name}`. `size` is `(height, depth, width)`. Layer names: `ccr_{name}`, `top` (Pool).
 
 ### `block_Unconv(name, botton, top, s_filer=256, n_filer=64, offset="(1,0,0)", size=(32,32,3.5), opacity=0.5)`
-上采样解码块：UnPool → ConvRes → Conv → ConvRes → Conv，连接 `botton` → `unpool_{name}`。最终输出层名为 `top`。
+Upsampling decoder block: UnPool → ConvRes → Conv → ConvRes → Conv, connecting `botton` → `unpool_{name}`. Final output layer name is `top`.
 
 ### `block_Res(num, name, botton, top, s_filer=256, n_filer=64, offset="(0,0,0)", size=(32,32,3.5), opacity=0.5)`
-`num` 个串联 Conv（中间层 `{name}_0`…`{name}_{num-2}`，末层 `top`），每层接 `to_connection`，并在 `layers[1]` 与 `layers[-2]` 之间加 `to_skip`。
+Chain of `num` Conv layers (intermediate layers `{name}_0`…`{name}_{num-2}`, final layer `top`), each with `to_connection`, plus `to_skip` between `layers[1]` and `layers[-2]`.
 
-## 布局约定
+## Layout Conventions
 
-- **定位**：`to="(prev-east)"` 将新层放在前一层的东侧；`offset="(dx,dy,dz)"` 微调位置（TikZ 3D 坐标）。
-- **尺寸**：`height`、`depth` 控制立体块的高与深（通常随特征图缩小而递减）；`width` 控制块厚度。
-- **颜色**：由 `to_cor()` 中的宏控制，无需在 Python 侧指定（Pool/Unpool 等层除外，它们有固定 fill 宏）。
-- **projectpath**：`to_head` 的参数为 `PROJECT_DIR` → `SCRIPTS_DIR` 的相对路径。
+- **Positioning**: `to="(prev-east)"` places a new layer east of the previous one; `offset="(dx,dy,dz)"` fine-tunes position (TikZ 3D coordinates).
+- **Sizing**: `height` and `depth` control block height and depth (usually shrink as feature maps downsample); `width` controls block thickness.
+- **Colors**: Controlled by macros in `to_cor()`; no Python-side color args needed (except fixed fill macros on Pool/Unpool layers).
+- **projectpath**: Argument to `to_head` is the relative path from `PROJECT_DIR` to `SCRIPTS_DIR`.

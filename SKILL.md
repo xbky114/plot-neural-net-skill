@@ -1,57 +1,57 @@
 ---
 name: plot-neural-net
-description: 当用户要求画神经网络示意图任务时触发。
+description: Trigger when the user asks to draw a neural network architecture diagram.
 ---
 
-调用 scripts/ 的库，编写python代码，生成神经网络架构示意图（PDF）。
+Use the bundled library in `scripts/` to write Python code that generates neural network architecture diagrams (PDF).
 
-# 核心规则与约束
+# Core Rules and Constraints
 
-- **只读库**：`scripts/` 为 PlotNeuralNet 捆绑库（`pycore/`、`layers/`、`examples/`），禁止写入或修改。
-- **产物**：所有用户 `.py`、`.tex`、`.pdf` 写在 `<skill-root>/projects/<project_name>/`。`<project_name>` 用 slug（小写、连字符），如 `resnet-18`。若 `projects/<project_name>/` 已存在，加日期后缀，如 `resnet-18-20250621`。python脚本的路径从 `__file__` 推导，不写死绝对路径。
-- **接口调用**：在调用scripts/的脚本的时候，禁止编造参数。如果你不知道如何编写，查看[llm.txt](llm.txt).
+- **Read-only library**: `scripts/` is the bundled PlotNeuralNet library (`pycore/`, `layers/`, `examples/`). Do not write to or modify it.
+- **Artifacts**: Write all user `.py`, `.tex`, and `.pdf` files under `<skill-root>/projects/<project_name>/`. Use a slug for `<project_name>` (lowercase, hyphenated), e.g. `resnet-18`. If `projects/<project_name>/` already exists, append a date suffix, e.g. `resnet-18-20250621`. Derive paths in Python scripts from `__file__`; do not hard-code absolute paths.
+- **API usage**: When calling `scripts/` APIs, do not invent parameters. If unsure how to write the code, read [llm.txt](llm.txt).
 
-# 目录结构
+# Directory Layout
 
 ```
-<skill-root>/                 # SKILL_ROOT，本文件所在目录
+<skill-root>/                 # SKILL_ROOT, directory containing this file
 ├── SKILL.md
-├── llm.txt                   # Python API 参考
-├── scripts/                  # SCRIPTS_DIR，只读
+├── llm.txt                   # Python API reference
+├── scripts/                  # SCRIPTS_DIR, read-only
 │   ├── pycore/
 │   ├── layers/
 │   ├── examples/
 │   ├── tikzmake.sh           # Linux / macOS / Git Bash
 │   └── tikzmake.ps1          # Windows PowerShell
-└── projects/                 # 用户产物，可整体删除清理
+└── projects/                 # user artifacts; safe to delete entirely for cleanup
     └── <project_name>/
         ├── <project_name>.py
-        ├── <project_name>.tex # 会被复制到 <output-dir>
-        └── <project_name>.pdf # 会被复制到 <output-dir>
+        ├── <project_name>.tex # copied to <output-dir>
+        └── <project_name>.pdf # copied to <output-dir>
 
 <output-dir>/
 ├── <project_name>.tex
 └── <project_name>.pdf
 ```
 
-| 变量 | 路径 |
-|------|------|
-| `SKILL_ROOT` | 含 `SKILL.md` 的目录 |
+| Variable | Path |
+|----------|------|
+| `SKILL_ROOT` | Directory containing `SKILL.md` |
 | `SCRIPTS_DIR` | `SKILL_ROOT / "scripts"` |
 | `PROJECT_DIR` | `SKILL_ROOT / "projects" / <project_name>` |
-| `PROJECT_PATH` | `os.path.relpath(SCRIPTS_DIR, PROJECT_DIR)`，通常 `../../scripts` |
+| `PROJECT_PATH` | `os.path.relpath(SCRIPTS_DIR, PROJECT_DIR)`, usually `../../scripts` |
 
-# 知识库
+# Knowledge Base
 
-当你对某些接口不确定，编写 `arch` 前读取 [llm.txt](llm.txt)，包含：
+When unsure about an API, read [llm.txt](llm.txt) before building `arch`. It covers:
 
-- `tikzeng` 层函数、连接函数、`to_generate`
-- `blocks` 复合块（`block_2ConvPool`、`block_Unconv`、`block_Res`）
-- 布局约定（定位、尺寸、锚点）
+- `tikzeng` layer functions, connection functions, and `to_generate`
+- `blocks` composite blocks (`block_2ConvPool`, `block_Unconv`, `block_Res`)
+- Layout conventions (positioning, sizing, anchors)
 
-纯 `.tex` 参考见 `scripts/examples/`。
+Pure `.tex` examples are in `scripts/examples/`.
 
-# 示例代码
+# Example Code
 
 ```python
 import os
@@ -87,33 +87,33 @@ if __name__ == '__main__':
     main()
 ```
 
-# 标准流程
+# Standard Workflow
 
 ```
-- [ ] 1. 理解用户架构（层类型、连接、skip、尺寸标注）。用户可能提供文字描述，公式描述等。如果某些地方用户描述不完全清楚，使用对深度学习和神经网络的基本理解来补全。
-- [ ] 2. 确定 <project_name>，创建 PROJECT_DIR
-- [ ] 3. 写入 <project_name>.py
-- [ ] 4. 确定产物的输出路径OUTPUT_DIR。如果用户制定了输出位置，则按照用户要求，否则选为用户工作区中最合适的位置。
-- [ ] 5. 编译。使用上一步确定的OUTPUT_DIR
-- [ ] 6. 列出创建/更新的文件路径
+- [ ] 1. Understand the user's architecture (layer types, connections, skip links, size labels). The user may provide text, formulas, etc. Fill in gaps using basic deep learning / neural network knowledge where the description is incomplete.
+- [ ] 2. Choose <project_name> and create PROJECT_DIR
+- [ ] 3. Write <project_name>.py
+- [ ] 4. Choose OUTPUT_DIR for artifacts. Use the user's path if specified; otherwise pick the most suitable location in the workspace.
+- [ ] 5. Compile using OUTPUT_DIR from step 4
+- [ ] 6. List created/updated file paths
 ```
 
-**Step 5 — 编译**
+**Step 5 — Compile**
 
-按系统选择脚本（参数相同：`<python_script_path>` `<output_dir>`）：
+Pick the script for your OS (same arguments: `<python_script_path>` `<output_dir>`):
 
-| 系统 | 命令 |
-|------|------|
-| Windows（PowerShell） | `powershell -ExecutionPolicy Bypass -File "<SKILL_ROOT>/scripts/tikzmake.ps1" "<PROJECT_DIR>/<project_name>.py" "<OUTPUT_DIR>"` |
+| OS | Command |
+|----|---------|
+| Windows (PowerShell) | `powershell -ExecutionPolicy Bypass -File "<SKILL_ROOT>/scripts/tikzmake.ps1" "<PROJECT_DIR>/<project_name>.py" "<OUTPUT_DIR>"` |
 | Linux / macOS / Git Bash | `bash "<SKILL_ROOT>/scripts/tikzmake.sh" "<PROJECT_DIR>/<project_name>.py" "<OUTPUT_DIR>"` |
 
-脚本在 `.py` 所在目录运行 `python` 与 `pdflatex`，删除中间产物，将 `.tex` 与 `.pdf` 复制到 `<OUTPUT_DIR>`。
+The script runs `python` and `pdflatex` in the `.py` directory, removes intermediate files, and copies `.tex` and `.pdf` to `<OUTPUT_DIR>`.
 
-编译日志不会打印到终端。假设.tex文件已经正常生成，那么编译的成功会由scripts/脚本的正确性保证。
+Compilation logs are not printed to the terminal. If the `.tex` file was generated correctly, successful compilation is guaranteed by the correctness of the `scripts/` tooling.
 
-**Step 6 — 收尾**
+**Step 6 — Wrap up**
 
-向用户报告：
+Report to the user:
 
 - `<PROJECT_DIR>/<project_name>.py`
-- `<OUTPUT_DIR>` 存放了.tex和.pdf
+- `<OUTPUT_DIR>` contains the `.tex` and `.pdf`
